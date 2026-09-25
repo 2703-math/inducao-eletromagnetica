@@ -55,47 +55,105 @@ st.markdown("""
         margin-bottom: 1rem;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
+    .highlight {
+        color: #ef4444;
+        font-weight: bold;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================
-# FUNÇÃO 1: ANIMAÇÃO DE FARADAY-LENZ
+# FUNÇÃO 1: GRÁFICO 3D - CORRENTE GERA CAMPO MAGNÉTICO (OERSTED)
+# ============================================
+def gerar_grafico_oersted(corrente):
+    fig = go.Figure()
+    
+    # Fio central
+    fig.add_trace(go.Scatter3d(x=[0,0], y=[0,0], z=[-5,5], mode='lines', 
+                               line=dict(color='#94a3b8', width=15), name='Fio Condutor', hoverinfo='skip'))
+    
+    if corrente != 0:
+        # Seta indicando o sentido da corrente
+        z_seta_inicio = -4 if corrente > 0 else 4
+        z_seta_fim = 4 if corrente > 0 else -4
+        cor_corrente = '#ef4444' if corrente > 0 else '#3b82f6'
+        
+        fig.add_trace(go.Scatter3d(x=[0,0], y=[0,0], z=[z_seta_inicio, z_seta_fim], mode='lines',
+                                   line=dict(color=cor_corrente, width=6), name='Corrente (I)'))
+        fig.add_trace(go.Scatter3d(x=[0], y=[0], z=[z_seta_fim], mode='markers',
+                                   marker=dict(symbol='diamond', size=8, color=cor_corrente), name='Sentido'))
+        
+        # Gerar vetores do Campo Magnético (Cones)
+        x_v, y_v, z_v, u_v, v_v, w_v = [], [], [], [], [], []
+        
+        for z in [-2.5, 0, 2.5]: # Três alturas diferentes no fio
+            for r in [2, 4]:     # Dois raios de campo
+                for theta in np.linspace(0, 2*np.pi, 12, endpoint=False):
+                    x = r * math.cos(theta)
+                    y = r * math.sin(theta)
+                    
+                    # Regra da mão direita: vetor tangente ao círculo
+                    sentido = 1 if corrente > 0 else -1
+                    u = -sentido * y / r
+                    v = sentido * x / r
+                    
+                    # Magnitude visual (tamanho da seta proporcional à corrente)
+                    mag = abs(corrente) / 4.0
+                    
+                    x_v.append(x)
+                    y_v.append(y)
+                    z_v.append(z)
+                    u_v.append(u * mag)
+                    v_v.append(v * mag)
+                    w_v.append(0)
+                    
+        fig.add_trace(go.Cone(
+            x=x_v, y=y_v, z=z_v, u=u_v, v=v_v, w=w_v,
+            colorscale='Reds' if corrente > 0 else 'Blues',
+            sizemode='absolute', sizeref=0.6, showscale=False, name='Campo Magnético (B)'
+        ))
+
+    fig.update_layout(
+        height=350, margin=dict(l=0, r=0, t=0, b=0), showlegend=False,
+        scene=dict(
+            xaxis=dict(range=[-5,5], visible=False),
+            yaxis=dict(range=[-5,5], visible=False),
+            zaxis=dict(range=[-5,5], visible=False),
+            camera=dict(eye=dict(x=1.2, y=1.2, z=0.8))
+        ),
+        paper_bgcolor='white', plot_bgcolor='white'
+    )
+    return fig
+
+# ============================================
+# FUNÇÃO 2: ANIMAÇÃO DE FARADAY-LENZ
 # ============================================
 def gerar_animacao_lenz(duracao_ms):
     fig = make_subplots(rows=1, cols=2, column_widths=[0.7, 0.3], horizontal_spacing=0.05, 
                         subplot_titles=("Ímã e Espira (Indução)", "Galvanômetro (Corrente Induzida)"))
 
-    # Parâmetros de tempo para um ciclo completo de ida e volta do ímã
     t_vals = np.linspace(0, 2 * np.pi, 60)
     
-    # Posições estáticas da espira (bobina)
     x_espira = [0, 1, 1, 0, 0]
     y_espira = [-1.5, -1.5, 1.5, 1.5, -1.5]
     
     fig.add_trace(go.Scatter(x=x_espira, y=y_espira, mode='lines', line=dict(color='#94a3b8', width=5), name='Espira', hoverinfo='skip'), row=1, col=1)
     
-    # Galvanômetro (Fundo)
     theta_arc = np.linspace(0, np.pi, 50)
     fig.add_trace(go.Scatter(x=np.cos(theta_arc), y=np.sin(theta_arc), mode='lines', line=dict(color='#cbd5e1', width=3), hoverinfo='skip'), row=1, col=2)
     fig.add_trace(go.Scatter(x=[0], y=[0], mode='markers', marker=dict(color='black', size=10), hoverinfo='skip'), row=1, col=2)
 
     frames = []
     for t in t_vals:
-        # Movimento do Ímã: Oscila entre -5 e -1.5
         x_ima_centro = -3.5 + 2 * math.cos(t)
-        v_ima = -2 * math.sin(t) # Velocidade (derivada da posição)
+        v_ima = -2 * math.sin(t) 
         
-        # O fluxo magnético diminui com a distância quadrada, mas simplificaremos para o visual:
-        # A corrente induzida (I) é proporcional a -Velocidade (Lei de Lenz)
         corrente_induzida = -v_ima 
         
-        # Desenho do Ímã
         x_ima = [x_ima_centro-1.5, x_ima_centro, x_ima_centro, x_ima_centro-1.5, x_ima_centro-1.5]
         y_ima = [-0.8, -0.8, 0.8, 0.8, -0.8]
-        
         x_ima_sul = [x_ima_centro, x_ima_centro+1.5, x_ima_centro+1.5, x_ima_centro, x_ima_centro]
         
-        # Vetor de corrente na espira
         if corrente_induzida > 0.1:
             seta_i_y = [1.8, 1.8]
             seta_i_x = [0.2, 0.8]
@@ -112,31 +170,25 @@ def gerar_animacao_lenz(duracao_ms):
             cor_seta = "rgba(0,0,0,0)"
             texto_i = "Sem Corrente (v=0)"
 
-        # Ponteiro do Galvanômetro
-        ang_ponteiro = (np.pi/2) - (corrente_induzida * 0.4) # 90 graus (meio) +/- desvio
+        ang_ponteiro = (np.pi/2) - (corrente_induzida * 0.4) 
         px = 0.9 * math.cos(ang_ponteiro)
         py = 0.9 * math.sin(ang_ponteiro)
 
         frames.append(go.Frame(
             data=[
-                # Ímã (Norte - Vermelho)
                 go.Scatter(x=x_ima_sul, y=y_ima, fill='toself', fillcolor='#ef4444', line=dict(color='black')),
-                # Ímã (Sul - Azul)
                 go.Scatter(x=x_ima, y=y_ima, fill='toself', fillcolor='#3b82f6', line=dict(color='black')),
-                # Indicador de Corrente
                 go.Scatter(x=seta_i_x, y=seta_i_y, mode='lines+markers', marker=dict(symbol='arrow-right', size=15), line=dict(color=cor_seta, width=4), text=[texto_i], hoverinfo='text'),
-                # Ponteiro do Galvanômetro
                 go.Scatter(x=[0, px], y=[0, py], mode='lines', line=dict(color=cor_seta if cor_seta != "rgba(0,0,0,0)" else "black", width=4))
             ],
             traces=[2, 3, 4, 5],
             name=f"f_{t}"
         ))
 
-    # Traces iniciais invisiveis/vazios para serem substituidos pelos frames
-    fig.add_trace(go.Scatter(x=[], y=[]), row=1, col=1) # trace 2
-    fig.add_trace(go.Scatter(x=[], y=[]), row=1, col=1) # trace 3
-    fig.add_trace(go.Scatter(x=[], y=[]), row=1, col=1) # trace 4
-    fig.add_trace(go.Scatter(x=[], y=[]), row=1, col=2) # trace 5
+    fig.add_trace(go.Scatter(x=[], y=[]), row=1, col=1) 
+    fig.add_trace(go.Scatter(x=[], y=[]), row=1, col=1) 
+    fig.add_trace(go.Scatter(x=[], y=[]), row=1, col=1) 
+    fig.add_trace(go.Scatter(x=[], y=[]), row=1, col=2) 
 
     fig.frames = frames
 
@@ -156,39 +208,33 @@ def gerar_animacao_lenz(duracao_ms):
     fig.update_xaxes(range=[-1.2, 1.2], showgrid=False, zeroline=False, visible=False, row=1, col=2)
     fig.update_yaxes(range=[-0.2, 1.2], showgrid=False, zeroline=False, visible=False, row=1, col=2)
     
-    # Anotações Fixas
     fig.add_annotation(x=-2, y=0, text="<b>N</b>", showarrow=False, font=dict(color="white", size=20), row=1, col=1)
     fig.add_annotation(x=-4, y=0, text="<b>S</b>", showarrow=False, font=dict(color="white", size=20), row=1, col=1)
     
     return fig
 
 # ============================================
-# FUNÇÃO 2: DIAGRAMA NFC (ESTÁTICO INTERATIVO)
+# FUNÇÃO 3: DIAGRAMA NFC
 # ============================================
 def gerar_diagrama_nfc():
     fig = go.Figure()
 
-    # Desenho do Smartphone (Dispositivo Ativo)
-    fig.add_shape(type="rect", x0=0, y0=0, x1=2, y2=4, line=dict(color="#1e293b", width=3), fillcolor="#f1f5f9", rx=0.2, ry=0.2)
+    fig.add_shape(type="rect", x0=0, y0=0, x1=2, y2=4, line=dict(color="#1e293b", width=3), fillcolor="#f1f5f9")
     fig.add_shape(type="circle", x0=0.8, y0=0.2, x1=1.2, y2=0.6, line=dict(color="#94a3b8", width=2))
     fig.add_annotation(x=1, y=2, text="<b>Smartphone<br>(Ativo)</b><br>Gera Campo<br>Magnético AC", showarrow=False, font=dict(size=14, color="#0f172a"))
     
-    # Bobina Interna do Smartphone
     theta = np.linspace(0, 10*np.pi, 200)
     r = np.linspace(0.5, 0.9, 200)
     fig.add_trace(go.Scatter(x=1 + r*np.cos(theta), y=2 + r*np.sin(theta), mode='lines', line=dict(color="#ef4444", width=2), hoverinfo='skip'))
 
-    # Desenho do Cartão / Tag NFC (Dispositivo Passivo)
-    fig.add_shape(type="rect", x0=7, y0=0.5, x1=10, y2=3.5, line=dict(color="#1e293b", width=3), fillcolor="#f1f5f9", rx=0.2, ry=0.2)
+    fig.add_shape(type="rect", x0=7, y0=0.5, x1=10, y2=3.5, line=dict(color="#1e293b", width=3), fillcolor="#f1f5f9")
     fig.add_annotation(x=8.5, y=2, text="<b>Cartão NFC<br>(Passivo)</b><br>Sofre Indução<br>e Responde", showarrow=False, font=dict(size=14, color="#0f172a"))
     
-    # Bobina e Chip do Cartão
     fig.add_shape(type="rect", x0=7.2, y0=0.7, x1=9.8, y2=3.3, line=dict(color="#3b82f6", width=2, dash="dot"))
     fig.add_shape(type="rect", x0=7.3, y0=0.8, x1=9.7, y2=3.2, line=dict(color="#3b82f6", width=2, dash="dot"))
-    fig.add_shape(type="rect", x0=8.3, y0=2.6, x1=8.7, y2=3.0, line=dict(color="black", width=2), fillcolor="#334155") # Microchip
+    fig.add_shape(type="rect", x0=8.3, y0=2.6, x1=8.7, y2=3.0, line=dict(color="black", width=2), fillcolor="#334155") 
     fig.add_annotation(x=8.5, y=3.2, text="Microchip", showarrow=False, font=dict(size=10, color="#0f172a"))
 
-    # Linhas de Campo Magnético (Acoplamento Indutivo)
     for rad in [2, 3, 4, 5]:
         arc_th = np.linspace(-np.pi/4, np.pi/4, 50)
         fig.add_trace(go.Scatter(x=2 + rad*np.cos(arc_th), y=2 + rad*np.sin(arc_th), mode='lines', line=dict(color="#10b981", width=2, dash='dash'), hoverinfo='skip'))
@@ -202,13 +248,11 @@ def gerar_diagrama_nfc():
     return fig
 
 # ============================================
-# FUNÇÃO 3: ANIMAÇÃO DA ANTENA (MICRO E MACRO - 3D)
+# FUNÇÃO 4: ANIMAÇÃO DA ANTENA (MICRO E MACRO)
 # ============================================
 def gerar_animacao_antena(duracao_ms):
     fig = make_subplots(
-        rows=1, cols=2, 
-        column_widths=[0.25, 0.75], 
-        horizontal_spacing=0.05,
+        rows=1, cols=2, column_widths=[0.25, 0.75], horizontal_spacing=0.05,
         specs=[[{"type": "xy"}, {"type": "scene"}]],
         subplot_titles=("Micro: Elétron na Antena", "Macro: Onda Eletromagnética (3D)")
     )
@@ -216,42 +260,30 @@ def gerar_animacao_antena(duracao_ms):
     t_vals = np.linspace(0, 4*np.pi, 40)
     x_onda = np.linspace(0, 10, 100)
 
-    # Subplot 1: Haste da Antena
     fig.add_trace(go.Scatter(x=[0, 0], y=[-2, 2], mode='lines', line=dict(color='#94a3b8', width=8), hoverinfo='skip'), row=1, col=1)
-    
-    # Subplot 2: Eixo de propagação (Vazio inicial)
     fig.add_trace(go.Scatter3d(x=[0, 10], y=[0, 0], z=[0, 0], mode='lines', line=dict(color='black', width=2), hoverinfo='skip'), row=1, col=2)
 
     frames = []
     for t in t_vals:
-        # Posição do elétron oscilante
         y_eletron = 1.5 * math.sin(t)
-        
-        # Campos Eletromagnéticos se propagando
-        # Campo Elétrico (E) oscila no eixo Z
         E_z = np.sin(x_onda - t)
         E_y = np.zeros_like(x_onda)
-        
-        # Campo Magnético (B) oscila ortogonalmente no eixo Y
         B_y = np.sin(x_onda - t)
         B_z = np.zeros_like(x_onda)
 
         frames.append(go.Frame(
             data=[
-                # Elétron
                 go.Scatter(x=[0], y=[y_eletron], mode='markers', marker=dict(color='red', size=15)),
-                # Campo Elétrico (Azul)
                 go.Scatter3d(x=x_onda, y=E_y, z=E_z, mode='lines', line=dict(color='#3b82f6', width=4)),
-                # Campo Magnético (Vermelho)
                 go.Scatter3d(x=x_onda, y=B_y, z=B_z, mode='lines', line=dict(color='#ef4444', width=4))
             ],
             traces=[1, 2, 3],
             name=f"f_{t}"
         ))
 
-    fig.add_trace(go.Scatter(x=[], y=[]), row=1, col=1) # Trace 1
-    fig.add_trace(go.Scatter3d(x=[], y=[], z=[]), row=1, col=2) # Trace 2
-    fig.add_trace(go.Scatter3d(x=[], y=[], z=[]), row=1, col=2) # Trace 3
+    fig.add_trace(go.Scatter(x=[], y=[]), row=1, col=1) 
+    fig.add_trace(go.Scatter3d(x=[], y=[], z=[]), row=1, col=2) 
+    fig.add_trace(go.Scatter3d(x=[], y=[], z=[]), row=1, col=2) 
 
     fig.frames = frames
 
@@ -263,7 +295,7 @@ def gerar_animacao_antena(duracao_ms):
             xaxis=dict(range=[0, 10], showgrid=False, zeroline=False, showticklabels=False),
             yaxis=dict(range=[-1.5, 1.5], showgrid=False, zeroline=False, showticklabels=False),
             zaxis=dict(range=[-1.5, 1.5], showgrid=False, zeroline=False, showticklabels=False),
-            camera=dict(eye=dict(x=1.5, y=-1.5, z=0.5)) # Visão isométrica fixa
+            camera=dict(eye=dict(x=1.5, y=-1.5, z=0.5)) 
         ),
         updatemenus=[{
             "type": "buttons", "showactive": False, "x": 0.0, "y": 1.15,
@@ -282,18 +314,51 @@ def gerar_animacao_antena(duracao_ms):
 # TÍTULO E ABAS DO APP
 # ============================================
 st.markdown('<div class="main-title">🧲 Eletromagnetismo Visual</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Da Lei de Faraday-Lenz à tecnologia NFC e Ondas de Rádio</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">A Simetria da Natureza: Eletricidade gerando Magnetismo e vice-versa</div>', unsafe_allow_html=True)
 
-tab1, tab2, tab3 = st.tabs([
-    "1. Indução e Lei de Lenz", 
-    "2. Tecnologia NFC (Aplicações)", 
-    "3. Antenas e Ondas Eletromagnéticas"
+tab1, tab2, tab3, tab4 = st.tabs([
+    "1. Fundamentos (A Simetria)",
+    "2. Indução e Lei de Lenz", 
+    "3. Tecnologia NFC (Aplicações)", 
+    "4. Antenas e Ondas"
 ])
 
 # ============================================
-# ABA 1: LEI DE FARADAY E LENZ
+# ABA 1: FUNDAMENTOS (CORRENTE <-> CAMPO MAGNÉTICO)
 # ============================================
 with tab1:
+    st.markdown("""
+    <div class="concept-card">
+        <b>O Início de Tudo:</b> Até 1820, Eletricidade e Magnetismo eram ciências separadas. Oersted descobriu que a eletricidade gera magnetismo. Faraday, anos depois, se perguntou: <i>"Se a eletricidade gera magnetismo, será que o magnetismo pode gerar eletricidade?"</i>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col_f1, col_f2 = st.columns([1, 2.2])
+    with col_f1:
+        st.markdown("<div class='param-box'>", unsafe_allow_html=True)
+        st.markdown("### 1. Corrente gera Magnetismo")
+        st.markdown("**(Experimento de Oersted)**<br>Ao passar corrente por um fio, um campo magnético em formato de anéis circulares nasce ao redor dele. Brinque com o sentido da corrente abaixo e observe a **Regra da Mão Direita** agir.", unsafe_allow_html=True)
+        
+        corrente_val = st.slider("Corrente Elétrica (I)", min_value=-10.0, max_value=10.0, value=5.0, step=1.0)
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+    with col_f2:
+        fig_oersted = gerar_grafico_oersted(corrente_val)
+        st.plotly_chart(fig_oersted, use_container_width=True, config={'displayModeBar': False})
+        
+    st.markdown("---")
+    st.markdown("""
+    <div class="alert-card">
+        <h3>2. O Campo Magnético gera Corrente? (A Busca de Faraday)</h3>
+        Sabendo do experimento acima, Faraday colocou um ímã forte e estático ao lado de um fio de cobre, esperando que surgisse corrente. <b>O resultado? Zero Amperes.</b><br><br>
+        Ele descobriu o segredo quase por acidente: o ímã não pode ficar parado! <b>É necessária a VARIAÇÃO do campo magnético (movimento)</b> para forçar os elétrons do fio a se moverem. Vá para a <b>Aba 2</b> para ver isso em ação!
+    </div>
+    """, unsafe_allow_html=True)
+
+# ============================================
+# ABA 2: LEI DE FARADAY E LENZ
+# ============================================
+with tab2:
     st.markdown("""
     <div class="concept-card">
         <b>Lei da Indução de Faraday:</b> A variação do fluxo magnético através de uma espira gera uma força eletromotriz (tensão) induzida.<br>
@@ -307,7 +372,7 @@ with tab1:
     with col1:
         st.markdown("<div class='param-box'>", unsafe_allow_html=True)
         st.markdown("**Controle do Experimento:**")
-        st.markdown("Observe que, quando o ímã se **aproxima** (v > 0), o fluxo aumenta e a corrente gira num sentido. Quando ele se **afasta**, o fluxo diminui e a corrente inverte para tentar 'puxar' o ímã de volta!")
+        st.markdown("Observe que, quando o ímã se <span class='highlight'>aproxima</span> (v > 0), o fluxo aumenta e a corrente gira num sentido. Quando ele se <span class='highlight'>afasta</span>, o fluxo diminui e a corrente inverte para tentar 'puxar' o ímã de volta!", unsafe_allow_html=True)
         duracao_ms_1 = st.select_slider("Velocidade do Ímã", options=[20, 50, 100], value=50, key='dur_1', format_func=lambda x: "Rápido" if x==20 else ("Médio" if x==50 else "Lento"))
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -316,9 +381,9 @@ with tab1:
         st.plotly_chart(fig1, use_container_width=True, config={'displayModeBar': False})
 
 # ============================================
-# ABA 2: TECNOLOGIA NFC
+# ABA 3: TECNOLOGIA NFC
 # ============================================
-with tab2:
+with tab3:
     st.markdown("""
     <div class="concept-card" style="border-left-color: #10b981;">
         <b>NFC (Near Field Communication):</b> É a tecnologia por trás do pagamento por aproximação (Apple Pay, cartões de crédito), crachás de acesso e bilhetes de transporte. Ela opera na frequência de <b>13.56 MHz</b> e funciona inteiramente graças à Indução Eletromagnética de Faraday.
@@ -344,9 +409,9 @@ with tab2:
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ============================================
-# ABA 3: ANTENAS E ONDAS ELETROMAGNÉTICAS
+# ABA 4: ANTENAS E ONDAS ELETROMAGNÉTICAS
 # ============================================
-with tab3:
+with tab4:
     st.markdown("""
     <div class="alert-card">
         <b>O Segredo das Telecomunicações (Wi-Fi, 5G, Rádio):</b> Como a informação atravessa paredes invisivelmente? A resposta está nas cargas elétricas aceleradas.

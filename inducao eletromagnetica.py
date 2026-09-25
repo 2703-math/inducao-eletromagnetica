@@ -214,25 +214,25 @@ def gerar_animacao_lenz(duracao_ms):
     return fig
 
 # ============================================
-# FUNÇÃO 3: DIAGRAMA NFC
+# FUNÇÃO 3: DIAGRAMA NFC (CORRIGIDO y1 no lugar de y2)
 # ============================================
 def gerar_diagrama_nfc():
     fig = go.Figure()
 
-    fig.add_shape(type="rect", x0=0, y0=0, x1=2, y2=4, line=dict(color="#1e293b", width=3), fillcolor="#f1f5f9")
-    fig.add_shape(type="circle", x0=0.8, y0=0.2, x1=1.2, y2=0.6, line=dict(color="#94a3b8", width=2))
+    fig.add_shape(type="rect", x0=0, y0=0, x1=2, y1=4, line=dict(color="#1e293b", width=3), fillcolor="#f1f5f9")
+    fig.add_shape(type="circle", x0=0.8, y0=0.2, x1=1.2, y1=0.6, line=dict(color="#94a3b8", width=2))
     fig.add_annotation(x=1, y=2, text="<b>Smartphone<br>(Ativo)</b><br>Gera Campo<br>Magnético AC", showarrow=False, font=dict(size=14, color="#0f172a"))
     
     theta = np.linspace(0, 10*np.pi, 200)
     r = np.linspace(0.5, 0.9, 200)
     fig.add_trace(go.Scatter(x=1 + r*np.cos(theta), y=2 + r*np.sin(theta), mode='lines', line=dict(color="#ef4444", width=2), hoverinfo='skip'))
 
-    fig.add_shape(type="rect", x0=7, y0=0.5, x1=10, y2=3.5, line=dict(color="#1e293b", width=3), fillcolor="#f1f5f9")
+    fig.add_shape(type="rect", x0=7, y0=0.5, x1=10, y1=3.5, line=dict(color="#1e293b", width=3), fillcolor="#f1f5f9")
     fig.add_annotation(x=8.5, y=2, text="<b>Cartão NFC<br>(Passivo)</b><br>Sofre Indução<br>e Responde", showarrow=False, font=dict(size=14, color="#0f172a"))
     
-    fig.add_shape(type="rect", x0=7.2, y0=0.7, x1=9.8, y2=3.3, line=dict(color="#3b82f6", width=2, dash="dot"))
-    fig.add_shape(type="rect", x0=7.3, y0=0.8, x1=9.7, y2=3.2, line=dict(color="#3b82f6", width=2, dash="dot"))
-    fig.add_shape(type="rect", x0=8.3, y0=2.6, x1=8.7, y2=3.0, line=dict(color="black", width=2), fillcolor="#334155") 
+    fig.add_shape(type="rect", x0=7.2, y0=0.7, x1=9.8, y1=3.3, line=dict(color="#3b82f6", width=2, dash="dot"))
+    fig.add_shape(type="rect", x0=7.3, y0=0.8, x1=9.7, y1=3.2, line=dict(color="#3b82f6", width=2, dash="dot"))
+    fig.add_shape(type="rect", x0=8.3, y0=2.6, x1=8.7, y1=3.0, line=dict(color="black", width=2), fillcolor="#334155") 
     fig.add_annotation(x=8.5, y=3.2, text="Microchip", showarrow=False, font=dict(size=10, color="#0f172a"))
 
     for rad in [2, 3, 4, 5]:

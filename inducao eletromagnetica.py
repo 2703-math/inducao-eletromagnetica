@@ -80,7 +80,7 @@ def build_oersted(corrente):
 # ==========================
 @st.cache_data
 def build_lenz_figure(speed_ms):
-    n_frames = 40 # Reduzido para evitar travamentos no navegador
+    n_frames = 40
     t_vals = np.linspace(0, 2*np.pi, n_frames)
 
     fig = make_subplots(rows=1, cols=2, column_widths=[0.7, 0.3], horizontal_spacing=0.05,
@@ -184,7 +184,7 @@ def build_nfc():
 # ==========================
 @st.cache_data
 def build_antena_figure(speed_ms):
-    n_frames = 40 # Otimizado para não travar o carregamento
+    n_frames = 40
     nx = 80 
     t_vals = np.linspace(0, 4*np.pi, n_frames)
     x_onda = np.linspace(0, 10, nx)
@@ -289,7 +289,7 @@ with tab2:
         st.markdown("<b>Controle do Experimento</b>")
         st.markdown("Quando o ímã <span class='highlight'>aproxima</span> (v > 0), o fluxo aumenta e a corrente gira num sentido para <b>opor</b> o aumento. Quando <span class='highlight'>afasta</span>, inverte para tentar 'puxá-lo' de volta — é a Lei de Lenz!", unsafe_allow_html=True)
         speed = st.select_slider("Velocidade do Ímã", [20, 50, 100], 50, key='lenz_speed',
-                                    format_func=lambda x: "Rápido" if x==20 else ("Médio" if x==50 else "Lento"))
+                                 format_func=lambda x: "Rápido" if x==20 else ("Médio" if x==50 else "Lento"))
         st.markdown("</div>", unsafe_allow_html=True)
     with col2:
         try:
@@ -324,11 +324,11 @@ with tab4:
         st.markdown("<b>Visão Micro e Macro</b>")
         st.markdown("""
         • <b>Micro:</b> Oscilador força elétrons a subirem/descerem na haste metálica.
-        • <b>Macro:</b> Perturbação se solta como Onda EM a $c \\approx 3\\times10^8$ m/s.
+        • <b>Macro:</b> Perturbação se solta como Onda EM a $c \approx 3\\times10^8$ m/s.
         """)
         st.markdown(r"**A Onda Perfeita:** O Campo Elétrico ($E$, azul) e o Campo Magnético ($B$, vermelho) são gerados ortogonalmente entre si, e ambos ortogonais à direção de propagação.")
         freq = st.select_slider("Frequência de Oscilação", [30, 80, 150], 80, key="ant_freq",
-                                   format_func=lambda x: "Alta" if x==30 else ("Média" if x==80 else "Baixa"))
+                                format_func=lambda x: "Alta" if x==30 else ("Média" if x==80 else "Baixa"))
         st.markdown("</div>", unsafe_allow_html=True)
     with col_a2:
         try:

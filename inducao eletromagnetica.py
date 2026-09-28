@@ -22,16 +22,16 @@ st.markdown("""
 # UTIL
 # ==========================
 def _check_plotly():
-    """Exibe versão e alerta se Plotly for muito antigo."""
     v = go.__version__
     st.caption(f"Plotly v{v} instalado")
     major = int(v.split(".")[0])
     if major < 5:
-        st.warning("Plotly < 5 pode não renderizar animações corretamente no Streamlit. Instale: `pip install 'plotly>=5'")
+        st.warning("Plotly < 5 pode não renderizar animações corretamente no Streamlit. Instale: `pip install 'plotly>=5'`")
 
 # ==========================
 # 1. OERSTED (estático)
 # ==========================
+@st.cache_data
 def build_oersted(corrente):
     fig = go.Figure()
     fig.add_trace(go.Scatter3d(x=[0,0], y=[0,0], z=[-5,5], mode='lines',
@@ -39,9 +39,9 @@ def build_oersted(corrente):
     if corrente == 0:
         fig.update_layout(height=350, margin=dict(l=0,r=0,t=0,b=0), showlegend=False,
                           scene=dict(xaxis=dict(range=[-5,5], visible=False),
-                                      yaxis=dict(range=[-5,5], visible=False),
-                                      zaxis=dict(range=[-5,5], visible=False),
-                                      camera=dict(eye=dict(x=1.2,y=1.2,z=0.8))),
+                                     yaxis=dict(range=[-5,5], visible=False),
+                                     zaxis=dict(range=[-5,5], visible=False),
+                                     camera=dict(eye=dict(x=1.2,y=1.2,z=0.8))),
                           paper_bgcolor='white', plot_bgcolor='white')
         return fig
 
@@ -63,63 +63,61 @@ def build_oersted(corrente):
                 uv.append(-sentido * y / r * mag)
                 vv.append(sentido * x / r * mag)
                 wv.append(0)
+                
     fig.add_trace(go.Cone(x=xv, y=yv, z=zv, u=uv, v=vv, w=wv,
                           colorscale='Reds' if corrente>0 else 'Blues',
                           sizemode='absolute', sizeref=0.6, showscale=False, name='Campo B'))
     fig.update_layout(height=350, margin=dict(l=0,r=0,t=0,b=0), showlegend=False,
                       scene=dict(xaxis=dict(range=[-5,5], visible=False),
-                                  yaxis=dict(range=[-5,5], visible=False),
-                                  zaxis=dict(range=[-5,5], visible=False),
-                                  camera=dict(eye=dict(x=1.2,y=1.2,z=0.8))),
+                                 yaxis=dict(range=[-5,5], visible=False),
+                                 zaxis=dict(range=[-5,5], visible=False),
+                                 camera=dict(eye=dict(x=1.2,y=1.2,z=0.8))),
                       paper_bgcolor='white', plot_bgcolor='white')
     return fig
 
 # ==========================
-# 2. FARADAY & LENZ (animação CORRIGIDA)
+# 2. FARADAY & LENZ (animação)
 # ==========================
+@st.cache_data
 def build_lenz_figure(speed_ms):
-    n_frames = 60
+    n_frames = 40 # Reduzido para evitar travamentos no navegador
     t_vals = np.linspace(0, 2*np.pi, n_frames)
 
     fig = make_subplots(rows=1, cols=2, column_widths=[0.7, 0.3], horizontal_spacing=0.05,
                         subplot_titles=("Ímã e Espira (Indução)", "Galvanômetro"))
 
-    # --- Traços BASE (precisam existir para os índices dos frames) ---
-    # trace 0: ímã sul (retângulo vermelho)
+    # Traços BASE
     fig.add_trace(go.Scatter(x=[0,0], y=[0,0], mode='lines', line=dict(color='red', width=5), name='S'), row=1, col=1)
-    # trace 1: ímã norte (retângulo azul)
     fig.add_trace(go.Scatter(x=[0,0], y=[0,0], mode='lines', line=dict(color='blue', width=5), name='N'), row=1, col=1)
-    # trace 2: seta corrente
     fig.add_trace(go.Scatter(x=[0], y=[0], mode='lines+markers', marker=dict(symbol='arrow-right', size=15),
                              line=dict(color='black', width=4), name='Corrente'), row=1, col=1)
-    # trace 3: ponteiro galvanômetro
     fig.add_trace(go.Scatter(x=[0,0], y=[0,0], mode='lines', line=dict(color='black', width=4), name='Ponteiro'), row=1, col=2)
 
-    # Espira fixa
     x_espira = [0, 1, 1, 0, 0]; y_espira = [-1.5, -1.5, 1.5, 1.5, -1.5]
     fig.add_trace(go.Scatter(x=x_espira, y=y_espira, mode='lines', line=dict(color='#94a3b8', width=5), name='Espira', hoverinfo='skip'), row=1, col=1)
-    # Círculo galvanômetro
+    
     th = np.linspace(0, np.pi, 50)
     fig.add_trace(go.Scatter(x=np.cos(th), y=np.sin(th), mode='lines', line=dict(color='#cbd5e1', width=3), hoverinfo='skip'), row=1, col=2)
     fig.add_trace(go.Scatter(x=[0], y=[0], mode='markers', marker=dict(color='black', size=10), hoverinfo='skip'), row=1, col=2)
 
-    # --- Frames ---
     frames = []
     for t in t_vals:
         x_c = -3.5 + 2*math.cos(t)
         v = -2*math.sin(t)
-        I = -v  # proporcional à velocidade (Faraday)
+        I = -v
         if I > 0.15:
             ix, iy = [0.2, 0.8], [1.8, 1.8]; cor = '#ef4444'; txt = 'Corrente ↻ (opõe aumento de Φ)'
         elif I < -0.15:
             ix, iy = [0.8, 0.2], [1.8, 1.8]; cor = '#3b82f6'; txt = 'Corrente ↺ (opõe diminuição de Φ)'
         else:
             ix = iy = [0.5]; cor = 'rgba(0,0,0,0)'; txt = 'Sem corrente (v ≈ 0)'
+            
         ang = np.pi/2 - I*0.4
         px, py = 0.9*math.cos(ang), 0.9*math.sin(ang)
 
         x_sul = [x_c, x_c+1.5, x_c+1.5, x_c, x_c]
         x_norte = [x_c-1.5, x_c, x_c, x_c-1.5, x_c-1.5]
+        
         frames.append(go.Frame(
             data=[
                 go.Scatter(x=x_sul, y=[-0.8,-0.8,0.8,0.8,-0.8], fill='toself', fillcolor='#ef4444', line=dict(color='black')),
@@ -155,31 +153,39 @@ def build_lenz_figure(speed_ms):
 # ==========================
 # 3. NFC (estático)
 # ==========================
+@st.cache_data
 def build_nfc():
     fig = go.Figure()
-    fig.add_shape('rect', x0=0, y0=0, x1=2, y1=4, line=dict(color='#1e293b', width=3), fillcolor='#f1f5f9')
-    fig.add_shape('circle', x0=0.8, y0=0.2, x1=1.2, y1=0.6, line=dict(color='#94a3b8', width=2))
+    fig.add_shape(type='rect', x0=0, y0=0, x1=2, y1=4, line=dict(color='#1e293b', width=3), fillcolor='#f1f5f9')
+    fig.add_shape(type='circle', x0=0.8, y0=0.2, x1=1.2, y1=0.6, line=dict(color='#94a3b8', width=2))
     fig.add_annotation(x=1, y=2, text='<b>Smartphone<br>(Ativo)</b><br>Gera Campo<br>Magnético AC', showarrow=False, font=dict(size=14, color='#0f172a'))
+    
     theta = np.linspace(0, 10*np.pi, 200); r = np.linspace(0.5, 0.9, 200)
     fig.add_trace(go.Scatter(x=1+r*np.cos(theta), y=2+r*np.sin(theta), mode='lines', line=dict(color='#ef4444', width=2), hoverinfo='skip'))
-    fig.add_shape('rect', x0=7, y0=0.5, x1=10, y1=3.5, line=dict(color='#1e293b', width=3), fillcolor='#f1f5f9')
+    
+    fig.add_shape(type='rect', x0=7, y0=0.5, x1=10, y1=3.5, line=dict(color='#1e293b', width=3), fillcolor='#f1f5f9')
     fig.add_annotation(x=8.5, y=2, text='<b>Cartão NFC<br>(Passivo)</b><br>Sofre Indução<br>e Responde', showarrow=False, font=dict(size=14, color='#0f172a'))
+    
     for i in (1,2):
-        fig.add_shape('rect', x0=7+i*0.2, y0=0.7+i*0.1, x1=10-i*0.2, y1=3.3-i*0.1, line=dict(color='#3b82f6', width=2, dash='dot'))
-    fig.add_shape('rect', x0=8.3, y0=2.6, x1=8.7, y1=3.0, line=dict(color='black', width=2), fillcolor='#334155')
+        fig.add_shape(type='rect', x0=7+i*0.2, y0=0.7+i*0.1, x1=10-i*0.2, y1=3.3-i*0.1, line=dict(color='#3b82f6', width=2, dash='dot'))
+    fig.add_shape(type='rect', x0=8.3, y0=2.6, x1=8.7, y1=3.0, line=dict(color='black', width=2), fillcolor='#334155')
     fig.add_annotation(x=8.5, y=3.2, text='Microchip', showarrow=False, font=dict(size=10, color='#0f172a'))
+    
     for rad in [2,3,4,5]:
         arc = np.linspace(-np.pi/4, np.pi/4, 50)
         fig.add_trace(go.Scatter(x=2+rad*np.cos(arc), y=2+rad*np.sin(arc), mode='lines', line=dict(color='#10b981', width=2, dash='dash'), hoverinfo='skip'))
+        
     fig.update_layout(height=400, showlegend=False, plot_bgcolor='white', paper_bgcolor='white',
                       xaxis=dict(range=[-1,11], visible=False), yaxis=dict(range=[-0.5,4.5], visible=False), margin=dict(l=0,r=0,t=10,b=10))
     return fig
 
 # ==========================
-# 4. ANTENA (animação CORRIGIDA)
+# 4. ANTENA (animação)
 # ==========================
+@st.cache_data
 def build_antena_figure(speed_ms):
-    n_frames = 60; nx = 120
+    n_frames = 40 # Otimizado para não travar o carregamento
+    nx = 80 
     t_vals = np.linspace(0, 4*np.pi, n_frames)
     x_onda = np.linspace(0, 10, nx)
 
@@ -187,22 +193,22 @@ def build_antena_figure(speed_ms):
                         specs=[[{"type":"xy"}, {"type":"scene"}]],
                         subplot_titles=("Micro: Elétron na Antena", "Macro: Onda Eletromagnética (3D)"))
 
-    # Traços BASE
-    fig.add_trace(go.Scatter(x=[0,0], y=[-2,2], mode='lines', line=dict(color='#94a3b8', width=8), hoverinfo='skip'), row=1, col=1)  # antena
-    fig.add_trace(go.Scatter3d(x=[0,10], y=[0,0], z=[0,0], mode='lines', line=dict(color='black', width=2), hoverinfo='skip'), row=1, col=2)  # eixo X
-    fig.add_trace(go.Scatter3d(x=[], y=[], z=[], mode='lines', line=dict(color='#3b82f6', width=4), name='E'), row=1, col=2)  # Campo E
-    fig.add_trace(go.Scatter3d(x=[], y=[], z=[], mode='lines', line=dict(color='#ef4444', width=4), name='B'), row=1, col=2)  # Campo B
+    fig.add_trace(go.Scatter(x=[0,0], y=[-2,2], mode='lines', line=dict(color='#94a3b8', width=8), hoverinfo='skip'), row=1, col=1) 
+    fig.add_trace(go.Scatter3d(x=[0,10], y=[0,0], z=[0,0], mode='lines', line=dict(color='black', width=2), hoverinfo='skip'), row=1, col=2)
+    fig.add_trace(go.Scatter3d(x=[], y=[], z=[], mode='lines', line=dict(color='#3b82f6', width=4), name='E'), row=1, col=2)
+    fig.add_trace(go.Scatter3d(x=[], y=[], z=[], mode='lines', line=dict(color='#ef4444', width=4), name='B'), row=1, col=2)
 
     frames = []
     for t in t_vals:
         y_e = 1.5*math.sin(t)
         Ez = np.sin(x_onda - t)
         By = np.sin(x_onda - t)
+        
         frames.append(go.Frame(
             data=[
-                go.Scatter(x=[0], y=[y_e], mode='markers', marker=dict(color='red', size=15)),  # elétron
-                go.Scatter3d(x=x_onda, y=np.zeros_like(x_onda), z=Ez, mode='lines', line=dict(color='#3b82f6', width=4)),  # E ao longo Z
-                go.Scatter3d(x=x_onda, y=By, z=np.zeros_like(x_onda), mode='lines', line=dict(color='#ef4444', width=4)),  # B ao longo Y
+                go.Scatter(x=[0], y=[y_e], mode='markers', marker=dict(color='red', size=15)),
+                go.Scatter3d(x=x_onda, y=np.zeros_like(x_onda), z=Ez, mode='lines', line=dict(color='#3b82f6', width=4)),
+                go.Scatter3d(x=x_onda, y=By, z=np.zeros_like(x_onda), mode='lines', line=dict(color='#ef4444', width=4)),
             ],
             traces=[0, 1, 2, 3]
         ))
